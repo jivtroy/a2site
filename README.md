@@ -1,4 +1,4 @@
-# Apache 2 site
+# Apache2 site management CLI
 
 Apache 2 HTTP Server site creation and removing tools using command line.
 
@@ -18,7 +18,7 @@ Apache 2 HTTP Server site creation and removing tools using command line.
 
 Name | Version
 ------- | -------
-Ubuntu | >= 16.04
+Ubuntu | >= 22.04
 Apache | >= 2
 
 ## Installation

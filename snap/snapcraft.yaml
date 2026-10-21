@@ -1,0 +1,40 @@
+name: a2site # Название всего пакета
+base: core22 # Базовый образ (Ubuntu 22.04 LTS; можно core20 или core24)
+version: '1.0.0'
+summary: Apache2 site management tools
+description: |
+  Apache 2 HTTP Server site creation and removing tools using command line.
+
+title: Apache2 site management CLI
+contact: https://github.com/jivtroy/a2site/issues
+license: MIT
+
+# Информационные поля (необязательные, но полезные):
+issues: https://github.com/jivtroy/a2site/issues
+source-code: https://github.com/jivtroy/a2site
+website: https://github.com/jivtroy/a2site
+
+grade: stable # 'devel' для разработки, 'stable' для релиза
+confinement: classic # Обязательно classic для таких утилит
+
+apps:
+  # Первая команда
+  a2mksite:
+    command: bin/a2mksite
+    plugs:
+      - home
+      - network
+      - network-bind
+
+  # Вторая команда
+  a2rmsite:
+    command: bin/a2rmsite
+    plugs:
+      - home
+      - network
+      - network-bind
+
+parts:
+  a2site-scripts:
+    plugin: dump
+    source: .
