@@ -135,7 +135,7 @@ fi
 "$EDITOR" "$temp_conf"
 if [ ! -s "$temp_conf" ]; then
     rm -f "$temp_conf"
-    echo "Error: the configuration file is empty, or creation has been canceled."
+    echo "Error: the configuration file is empty or creation has been canceled."
     exit 1
 fi
 

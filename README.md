@@ -1,4 +1,4 @@
-# Apache2 site management CLI
+# Create or delete an Apache2 site
 
 Interactive scripts for creating and deleting virtual hosts in Apache 2. These scripts allow you to create and edit configuration files, add entries to the `/etc/hosts` file, and set up site directories — all via a single CLI command.
 
@@ -7,6 +7,7 @@ Interactive scripts for creating and deleting virtual hosts in Apache 2. These s
 1. [Compatibility](#compatibility)
 2. [Installation](#installation)
    1. [Snap](#snap)
+   2. [Build](#build)
 3. [Usage](#usage)
    1. [Site creation](#site-creation)
    2. [Site removing](#site-removing)
@@ -26,6 +27,17 @@ Apache | >= 2
 ### Snap
 
 ```bash
+sudo snap install a2site --classic
+```
+
+### Build
+
+Alternative build from source code.
+
+```bash
+sudo snap install snapcraft --classic
+snapcraft pack --destructive-mode
+sudo snap install ./a2site_version_amd64.snap --classic
 ```
 
 ## Usage
@@ -33,38 +45,13 @@ Apache | >= 2
 ### Site creation
 
 ```bash
-sudo a2mksite mydomain mysite.conf ~/myfolder 127.0.0.1
+sudo a2mksite
 ```
-
-This command will create:
-
-* Virtual host `/etc/apache2/sites-available/mysite.conf` with url http://mydomain.
-* Folder `~/myfolder`.
-* Record in `/etc/hosts` - mydomain   127.0.0.1.
-
-#### Short command
-
-```bash
-sudo a2mksite mydomain
-```
-
-This command will create:
-
-* Virtual host `/etc/apache2/sites-available/mydomain.conf` with url http://mydomain.
-* Folder in current directory with name mydomain.
-* Record in `/etc/hosts` - mydomain   127.0.0.1.
-* Restart web server.
 
 ### Site removing
 
 ```bash
-sudo a2rmsite mydomain mysite.conf ~/myfolder 127.0.0.1
-```
-
-#### Short command
-
-```bash
-sudo a2rmsite mydomain
+sudo a2rmsite
 ```
 
 ## Removing
@@ -72,7 +59,7 @@ sudo a2rmsite mydomain
 To completely remove the package run the command:
 
 ```bash
-sudo apt remove --purge a2site
+sudo snap remove a2site
 ```
 
 ## Author

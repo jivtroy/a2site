@@ -1,24 +1,22 @@
-name: a2site # Название всего пакета
-base: core22 # Базовый образ (Ubuntu 22.04 LTS; можно core20 или core24)
+name: a2site
+base: core22 # Base image (Ubuntu 22.04 LTS; core20 or core24 available)
 version: '1.0.0'
+title: Create or delete an Apache2 site
 summary: Interactive scripts for creating and deleting virtual hosts in Apache 2.
 description: |
   These scripts allow you to create and edit Apache 2 configuration files, add entries to the `/etc/hosts` file, and set up site directories — all via a single CLI command.
 
-title: Apache2 site management CLI
 contact: https://github.com/jivtroy/a2site/issues
 license: MIT
 
-# Информационные поля (необязательные, но полезные):
 issues: https://github.com/jivtroy/a2site/issues
 source-code: https://github.com/jivtroy/a2site
 website: https://github.com/jivtroy/a2site
 
-grade: stable # 'devel' для разработки, 'stable' для релиза
-confinement: classic # Обязательно classic для таких утилит
+grade: stable # 'devel' for development, 'stable' for release
+confinement: classic # classic is a must for such utilities
 
 apps:
-  # Первая команда
   a2mksite:
     command: bin/a2mksite
     plugs:
@@ -26,7 +24,6 @@ apps:
       - network
       - network-bind
 
-  # Вторая команда
   a2rmsite:
     command: bin/a2rmsite
     plugs:

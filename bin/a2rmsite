@@ -91,7 +91,7 @@ if [ ! -d "$dir" ] || ! ask_yn "Is this the correct site directory - $dir?"; the
     while true; do
         read -p "Enter the site directory: " dir
         if [ -z "$dir" ]; then
-            echo "Site directory not specified."
+            echo "Site directory not provided."
             continue
         elif [ ! -d "$dir" ]; then
             echo "The directory $dir not exists, try another one."
