@@ -1,6 +1,6 @@
 # Apache2 site management CLI
 
-Apache 2 HTTP Server site creation and removing tools using command line.
+Interactive scripts for creating and deleting virtual hosts in Apache 2. These scripts allow you to create and edit configuration files, add entries to the `/etc/hosts` file, and set up site directories — all via a single CLI command.
 
 ### Contents
 

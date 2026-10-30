@@ -1,53 +1,137 @@
 #!/bin/sh
 
+ask_yn() {
+    local answer
+    printf "%s [Y/n]: " "$1"
+    
+    while true; do
+        read answer
+        case "$answer" in
+            [Yy]* | "") return 0 ;;
+            [Nn]*) return 1 ;;
+            *) echo "Please enter Y or N: " ;;
+        esac
+    done
+}
+
+# Hosts validation
 hosts="/etc/hosts"
-sites="/etc/apache2/sites-available"
-
-# Validate domain
-domain=$1
-if [ ! $domain ]; then
-    echo "Domain name not provided."
-    exit
+if [ ! -f "$hosts" ]; then
+    echo "The system hosts file $hosts does not exist."
+    exit 1
+elif [ ! -w "$hosts" ]; then
+    echo "The system hosts file $hosts is not writable."
+    exit 1
 fi
 
-# Validate site
-site=$2
-if [ ! $site ]; then
-    site="${domain}.conf"
+# Domain validation
+while true; do
+    read -p "Enter a domain name (e.g., example.com): " domain
+    if [ -z "$domain" ]; then
+        echo "Domain name is empty."
+        continue
+    elif ! grep -q "$domain" $hosts; then
+        echo "The domain $domain not exists in $hosts, try another one."
+        continue
+    fi
+    break
+done
+
+# Virtual hosts path validation
+systems_vhosts="
+/etc/apache2/sites-available
+/etc/httpd/conf.d
+/etc/apache2/vhosts.d
+/etc/httpd/conf/extra
+"
+
+vhosts=""
+for system_vhosts in $systems_vhosts; do
+    if [ -d "$system_vhosts" ]; then
+        vhosts=$system_vhosts
+        break
+    fi
+done
+
+if [ -z "$vhosts" ] || ! ask_yn "You want to use the founded virtual hosts path - $vhosts?"; then
+    while true; do
+        read -p "Enter the virtual hosts path: " vhosts
+        if [ -z "$vhosts" ]; then
+            echo "The path to virtual hosts is empty."
+            continue
+        elif [ ! -d "$vhosts" ]; then
+            echo "The entered virtual hosts path does not exist: $vhosts."
+            continue
+        fi
+        break
+    done
 fi
 
-# Validate directory
-dir=$3
-if [ ! $dir ]; then
-    dir="${PWD}/${domain}"
+# Virtual host name validation
+conf="${domain}.conf"
+vhost="$vhosts/$conf"
+if [ ! -f "$vhost" ] || ! ask_yn "Is this the correct virtual host name - $conf?"; then
+    while true; do
+        read -p "Enter the virtual host name: " conf
+        if [ -z "$conf" ]; then
+            echo "The virtual host name is empty."
+            continue
+        elif [ ! -f "$vhosts/$conf" ]; then
+            echo "The virtual host $vhosts/$conf not exists, try another one."
+            continue
+        fi
+        vhost="$vhosts/$conf"
+        break
+    done
 fi
 
-# Validate host
-host=$4
-if [ ! $host ]; then
-    host="127.0.0.1"
+# Site directory validation
+dir="${PWD}/${domain}"
+if [ ! -d "$dir" ] || ! ask_yn "Is this the correct site directory - $dir?"; then
+    while true; do
+        read -p "Enter the site directory: " dir
+        if [ -z "$dir" ]; then
+            echo "Site directory not specified."
+            continue
+        elif [ ! -d "$dir" ]; then
+            echo "The directory $dir not exists, try another one."
+            continue
+        fi
+        break
+    done
 fi
 
-if [ ! -f $hosts -o ! -w $hosts ]; then
-    echo "Hosts $hosts not exists or not writable."
-    exit
+# Host validation
+host="127.0.0.1"
+if ! ask_yn "Is this the correct host address - $host?"; then
+    while true; do
+        read -p "Enter the host address: " host
+        if [ -z "$host" ]; then
+            echo "Host address is empty."
+            continue
+        fi
+        break
+    done
 fi
 
-if [ ! -d $dir ]; then
-    echo "Directory not exists."
-    exit
+if [ -x "/usr/sbin/a2dissite" ]; then
+    a2dissite $conf
 fi
 
-vhost="$sites/$site"
-if [ ! -f $vhost ]; then
-    echo "Virtual host not exists."
-    exit
-fi
+systemctl reload apache2
 
 # https://www.tutorialspoint.com/unix/unix-regular-expressions.htm
 sed -i "/^${host}[[:space:]][[:space:]][[:space:]]${domain}$/d" $hosts
+echo "Domain removed from $hosts."
 
-a2dissite $site
-systemctl reload apache2
-rm -R $dir
-rm $vhost
+if ask_yn "Confirm deletion of the site directory - $dir?"; then
+    rm -R $dir
+    echo "The following site directory has been deleted: $dir."
+fi
+
+if ask_yn "Confirm deletion of the virtual host config - $vhost?"; then
+    rm $vhost
+    echo "The following virtual host config has been removed: $vhost."
+fi
+
+exit 0

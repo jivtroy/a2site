@@ -1,78 +1,165 @@
 #!/bin/sh
 
-# Global variables
+ask_yn() {
+    local answer
+    printf "%s [Y/n]: " "$1"
+    
+    while true; do
+        read answer
+        case "$answer" in
+            [Yy]* | "") return 0 ;;
+            [Nn]*) return 1 ;;
+            *) echo "Please enter Y or N: " ;;
+        esac
+    done
+}
+
+# Hosts validation
 hosts="/etc/hosts"
-sites="/etc/apache2/sites-available"
-a2site="/etc/apache2/a2site.conf"
-
-# Validate domain
-domain=$1
-if [ ! $domain ]; then
-    echo "Domain name not provided."
-    exit
+if [ ! -f "$hosts" ]; then
+    echo "The system hosts file $hosts does not exist."
+    exit 1
+elif [ ! -w "$hosts" ]; then
+    echo "The system hosts file $hosts is not writable."
+    exit 1
 fi
 
-# Validate site
-site=$2
-if [ ! $site ]; then
-    site="${domain}.conf"
+# Domain validation
+while true; do
+    read -p "Enter a domain name (e.g., example.com): " domain
+    if [ -z "$domain" ]; then
+        echo "Domain name is empty."
+        continue
+    elif grep -q "$domain" $hosts; then
+        echo "The domain $domain already exists in $hosts, try another one."
+        continue
+    fi
+    break
+done
+
+# Virtual hosts path validation
+systems_vhosts="
+/etc/apache2/sites-available
+/etc/httpd/conf.d
+/etc/apache2/vhosts.d
+/etc/httpd/conf/extra
+"
+
+vhosts=""
+for system_vhosts in $systems_vhosts; do
+    if [ -d "$system_vhosts" ]; then
+        vhosts=$system_vhosts
+        break
+    fi
+done
+
+if [ -z "$vhosts" ] || ! ask_yn "You want to use the founded virtual hosts path - $vhosts?"; then
+    while true; do
+        read -p "Enter the virtual hosts path: " vhosts
+        if [ -z "$vhosts" ]; then
+            echo "The path to virtual hosts is empty."
+            continue
+        elif [ ! -d "$vhosts" ]; then
+            echo "The entered virtual hosts path does not exist: $vhosts."
+            continue
+        fi
+        break
+    done
 fi
 
-# Validate directory
-dir=$3
-if [ ! $dir ]; then
-    dir="${PWD}/${domain}"
+# Virtual host name validation
+conf="${domain}.conf"
+vhost="$vhosts/$conf"
+if [ -f "$vhost" ] || ! ask_yn "You want to use a domain name for the virtual host - $conf?"; then
+    while true; do
+        read -p "Enter the virtual host name: " conf
+        if [ -z "$conf" ]; then
+            echo "The virtual host name is empty."
+            continue
+        elif [ -f "$vhosts/$conf" ]; then
+            echo "The virtual host $vhosts/$conf already exists, try another one."
+            continue
+        fi
+        vhost="$vhosts/$conf"
+        break
+    done
 fi
 
-# Validate host
-host=$4
-if [ ! $host ]; then
-    host="127.0.0.1"
+# Site directory validation
+# You can use an existing directory, as it is often necessary to set up a virtual host for a cloned Git repository.
+dir="${PWD}/${domain}"
+if ! ask_yn "Would you like to use the following site directory - $dir?"; then
+    while true; do
+        read -p "Enter the site directory: " dir
+        if [ -z "$dir" ]; then
+            echo "Site directory not provided."
+            continue
+        fi
+        break
+    done
 fi
 
-# Validate /etc/hosts
-if [ ! -f $hosts -o ! -w $hosts ]; then
-    echo "Hosts $hosts not exists or not writable."
-    exit
+# Host validation
+host="127.0.0.1"
+if ! ask_yn "You wish to use the following host address - $host?"; then
+    while true; do
+        read -p "Enter the host address: " host
+        if [ -z "$host" ]; then
+            echo "Host address is empty."
+            continue
+        fi
+        break
+    done
 fi
 
-# Validate /etc/apache2/sites-available
-if [ ! -d $sites ]; then
-    echo "Path $sites not exists. Please sure the Apache2 is installed."
-    exit
+# Creating a virtual host
+temp_conf=$(mktemp)
+cat <<EOF > "$temp_conf"
+<VirtualHost *:80>
+    ServerName ${domain}
+    ServerAlias ${domain}
+
+    DocumentRoot ${dir}
+
+    <Directory ${dir}>
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+EOF
+
+if [ -z "$EDITOR" ]; then
+    EDITOR="nano"
 fi
 
-# Validate virtual host
-vhost="$sites/$site"
-if [ -f $vhost ]; then
-    echo "Virtual host $vhost exists."
-    exit
+"$EDITOR" "$temp_conf"
+if [ ! -s "$temp_conf" ]; then
+    rm -f "$temp_conf"
+    echo "Error: the configuration file is empty, or creation has been canceled."
+    exit 1
 fi
 
-# Validate a2site.conf
-if [ ! -f $a2site ]; then
-    echo "File $a2site not exists."
-    exit
-fi
+mv "$temp_conf" "$vhost"
+echo "Virtual host config successfully saved in: $vhost."
 
-# Create virtual host
-# http://rosettacode.org/wiki/Read_entire_file#UNIX_Shell
-site_data=$(printf '%s\n' "$(cat $a2site)" | sed -e "s/\${SITE_NAME}/${domain}/g" | sed -e "s#\${SITE_DIR}#${dir}#g")
-printf '%s\n' "$site_data" > $vhost
-
-# Validate site directory and make if not exists
-if [ ! -d $dir ]; then
+# Creating a site directory
+if [ ! -d "$dir" ]; then
     mkdir -p $dir
-    if [ $SUDO_USER ]; then
+    if [ "$SUDO_USER" ]; then
         chown -R "$SUDO_USER:$SUDO_USER" $dir
     fi
+    echo "The website directory has been created in: $dir."
 fi
 
-# Create record in /etc/hosts
+# Creating a record in /etc/hosts
 echo "$host   $domain" >> $hosts
+echo "The following entry has been added to /etc/hosts: $host   $domain."
 
-# Enable virtual host
-a2ensite $site
+# Enabling a virtual host
+if [ -x "/usr/sbin/a2ensite" ]; then
+    a2ensite $conf
+fi
 
 # Reload Apache
 systemctl reload apache2
+exit 0
