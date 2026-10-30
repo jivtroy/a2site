@@ -30,7 +30,7 @@ while true; do
     if [ -z "$domain" ]; then
         echo "Domain name is empty."
         continue
-    elif ! grep -q "$domain" $hosts; then
+    elif ! grep -qE "(^|[[:space:]])${domain}\b" "$hosts"; then
         echo "The domain $domain not exists in $hosts, try another one."
         continue
     fi
@@ -101,28 +101,15 @@ if [ ! -d "$dir" ] || ! ask_yn "Is this the correct site directory - $dir?"; the
     done
 fi
 
-# Host validation
-host="127.0.0.1"
-if ! ask_yn "Is this the correct host address - $host?"; then
-    while true; do
-        read -p "Enter the host address: " host
-        if [ -z "$host" ]; then
-            echo "Host address is empty."
-            continue
-        fi
-        break
-    done
-fi
-
 if [ -x "/usr/sbin/a2dissite" ]; then
     a2dissite $conf
 fi
 
 systemctl reload apache2
 
-# https://www.tutorialspoint.com/unix/unix-regular-expressions.htm
-sed -i "/^${host}[[:space:]][[:space:]][[:space:]]${domain}$/d" $hosts
-echo "Domain removed from $hosts."
+if sed -i -E "/^[[:space:]]*[^#]*([^.]|^)${domain}\b/d" "$hosts"; then
+    echo "Domain removed from $hosts."
+fi
 
 if ask_yn "Confirm deletion of the site directory - $dir?"; then
     rm -R $dir

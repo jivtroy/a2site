@@ -37,7 +37,7 @@ Alternative build from source code.
 ```bash
 sudo snap install snapcraft --classic
 snapcraft pack --destructive-mode
-sudo snap install ./a2site_version_amd64.snap --classic
+sudo snap install ./a2site_version_amd64.snap --classic --dangerous
 ```
 
 ## Usage

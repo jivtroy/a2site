@@ -30,7 +30,7 @@ while true; do
     if [ -z "$domain" ]; then
         echo "Domain name is empty."
         continue
-    elif grep -q "$domain" $hosts; then
+    elif grep -qE "(^|[[:space:]])${domain}\b" "$hosts"; then
         echo "The domain $domain already exists in $hosts, try another one."
         continue
     fi
